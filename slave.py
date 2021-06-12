@@ -35,7 +35,7 @@ class zerg:
         authHead = ID+":"+pw
         authHeadB64 = base64.b64encode(authHead.encode()).decode()
 
-        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthentication: Basic {authHeadB64}\n\n'''  #internet says to use carriage return but not sure why
+        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\n\n'''  #internet says to use carriage return but not sure why
         
         print("testing pw:",pw)
         msg = httpHeader
