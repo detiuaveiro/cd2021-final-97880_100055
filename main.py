@@ -89,7 +89,7 @@ def authenticate(
 
     if request.client.host not in monitored or datetime.now() > last_seen + timedelta(
         milliseconds=COOLDOWN_TIME
-    ):
+    ):  
         logger.debug("Start monitoring %s", request.client)
         time.sleep(NEW_PENALTY / 1000)
         tries = 0
