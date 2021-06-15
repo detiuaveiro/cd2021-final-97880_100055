@@ -1,4 +1,5 @@
 """Server constants, can change during project lifetime."""
+import os
 
 # Value in ms
 BANNED_TIME = 2400
@@ -12,4 +13,7 @@ MAX_VALIDATE = 100
 MIN_TRIES = 10
 MAX_TRIES = 20
 
-PASSWORD_SIZE = 1
+PASSWORD_SIZE = os.environ.get('PASSWORD_SIZE', default =1)
+
+if __name__ == "__main__":
+	print(PASSWORD_SIZE) 
