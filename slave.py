@@ -1,4 +1,4 @@
-from const import *
+#from const import *
 import base64
 import socket
 import itertools
@@ -16,7 +16,7 @@ class zerg:
         #self.sel = selectors.DefaultSelector()
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.name = name
-        self.HOST = "localhost" #"host.docker.internal"
+        self.HOST = "127.0.0.1" #"host.docker.internal"
         self.PORT = 8000
         self.alive = True
         self.pws_tried = []
@@ -77,7 +77,7 @@ class zerg:
                             self.try_pw(item[0])
                             count+=1
                             if count >4: #target->5
-                                time.sleep(COOLDOWN_TIME/100) #nao gosto desta linha
+                                time.sleep(600/100) #nao gosto desta linha
                                 count = 0
                                 self.connect()
                         else:
