@@ -16,13 +16,13 @@ class zerg:
         #self.sel = selectors.DefaultSelector()
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.name = name
-        self.HOST = "127.0.0.1" #"host.docker.internal"
+        self.HOST = "172.17.0.2" #"host.docker.internal"
         self.PORT = 8000
         self.alive = True
-        self.pws_tried = []
+        self.pws_tried = set()
         self.connect()
         self.found=False
-
+        self.latest_pws=list()
 
     def connect(self):
         """Connect to chat server and setup stdin flags."""
@@ -44,11 +44,14 @@ class zerg:
         self.send_msg(msg)
 
     def send_msg(self,msg):
+        """Sends ONE (1) message to VICTIM""" #mwahaha
         encoded_msg=str(msg).encode("utf-8")          
         self.s.send(encoded_msg)
         self.server_response()
         
+        
     def server_response(self):
+        """Receives ONE (1) http response"""
         incoming=""
         while not "\r\n\r\n" in incoming:
             try:
@@ -63,6 +66,11 @@ class zerg:
             self.found=True
             print("GOT IT!\nwas it "+self.pws_tried[-1]+"?")
     
+    def gen_pw(self):
+        '''Generates a password based on the current list of passwords (TODO: can be optimized!)'''
+        chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPKRSTUVWXYZ"
+
+        pass
 
     def loop(self):
         while self.alive:

@@ -1,0 +1,8 @@
+# Slaves must be able to differentiate messages from otehr slaves and the server!
+
+Hello msg - when a new node joins the network, flood network with this message 
+
+Welcome - Response to Hello from existing nodes, include the 
+
+Update msg - sent after n passwords tries from each client, contains the list with the present nodes and the tried passwords since last update
+    upon receiving, 
