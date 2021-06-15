@@ -8,27 +8,6 @@ Launch containers with 1 worker each (this is your code)
 
 When you successfully guess the password, the worker will receive an image file.
 
-<<<<<<< HEAD
-# Build your docker container
-
-$ docker build --tag projecto_final .
-
-# Launching containers
-
-$ docker run -d --name worker1 projecto_final
-
-# Monitor your containers
-
-$ docker ps -a
-
-# Stop your container
-
-$ docker stop <container id>
-
-# Remove old containers
-
-$ docker rm <container id>
-=======
 # Using Docker
 
 ## Build your docker container
@@ -54,4 +33,3 @@ $ docker rm <container id>
 # Tips for install in Ubuntu:
 
 $ sudo apt-get install libsasl2-dev python-dev libldap2-dev libssl-dev python3-openssl
->>>>>>> upstream/main
