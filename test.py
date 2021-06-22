@@ -1,36 +1,41 @@
 PASSWORD_SIZE = 3
 
-def mergeList(list):
+def mergeList(listt):
     '''Smoothes out the Verified array, removing duplicates and merging adjacent arrays'''
-    list.sort()
+    listt.sort()
     changed = True
     while changed:
         changed = False
-        for i in range(len(list)):
+        for i in range(len(listt)):
             if i == 0:
                 continue
-            if list[i-1][1]+1 == list[i][0]:
-                newRange = [list[i-1][0], list[i][1]]
-                del list[i-1]
-                del list[i-1]
-                list.append(newRange)
+            if listt[i-1] == listt[i]:
+                del listt[i]
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-            elif list[i][1] > list[i-1][1] >= list[i][0]:
-                newRange = [list[i-1][0], list[i][1]]
-                del list[i-1]
-                del list[i-1]
-                list.append(newRange)
+            if listt[i-1][1]+1 == listt[i][0]:
+                newRange = [listt[i-1][0], listt[i][1]]
+                del listt[i-1]
+                del listt[i-1]
+                listt.append(newRange)
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-            elif list[i][1] < list[i-1][1]:
-                del list[i]
+            elif listt[i][1] > listt[i-1][1] >= listt[i][0]:
+                newRange = [listt[i-1][0], listt[i][1]]
+                del listt[i-1]
+                del listt[i-1]
+                listt.append(newRange)
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-    return list
+            elif listt[i][1] < listt[i-1][1]:
+                del listt[i]
+                changed = True
+                listt.sort()
+                break
+    return listt
 
 def invertRangeList(list):
     list = mergeList(list)
@@ -60,13 +65,13 @@ def invertRangeList(list):
     newList.sort()
     return newList
 
-testlist = [[300,62**PASSWORD_SIZE-1],[400,500]]
+testlist = [[0,39],[0,3844]]
 testlist.sort()
 
 print(testlist)
-mergeList(testlist)
+testlist=mergeList(testlist)
 print(testlist)
 
-print(invertRangeList(testlist))
+#print(invertRangeList(testlist))
 
 

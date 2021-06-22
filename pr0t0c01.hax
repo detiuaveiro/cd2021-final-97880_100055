@@ -31,7 +31,7 @@ GOTALL (args: none) MULTICAST -> sent whenever a slave verified all passwords in
                                  when another slave recieves this message, updates their verified, responds with an IMHERE
 
 FOUNDPW (args: password) MULTICAST -> sent when a slave finds the correct password 
-                                      when another slave recieves this message, stops working
+                                      when another slave recieves this message, prints password, stops working
 
 
 Message:
@@ -40,5 +40,4 @@ Message:
 
 }
 DONE: (function) given an integer between 0 and 62^passLength, return the respective string, different integers must result in a different string
-TODO: set up multicast sockets
-TODO: implement protocol :D
+TODO: Fix looping overlaps (they don't steal from one another, they don't start out with the whole range)

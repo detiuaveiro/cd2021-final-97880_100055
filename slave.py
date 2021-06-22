@@ -70,65 +70,78 @@ def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
             str = "a" + str
     return str
 
-
-def mergeList(list):
+def mergeList(listt):
     '''Smoothes out the Verified array, removing duplicates and merging adjacent arrays'''
-    list.sort()
+    listt.sort()
     changed = True
     while changed:
         changed = False
-        for i in range(len(list)):
+        for i in range(len(listt)):
             if i == 0:
                 continue
-            if list[i-1][1]+1 == list[i][0]:
-                newRange = [list[i-1][0], list[i][1]]
-                del list[i-1]
-                del list[i-1]
-                list.append(newRange)
+            if listt[i-1] == listt[i]:
+                del listt[i]
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-            elif list[i][1] > list[i-1][1] >= list[i][0]:
-                newRange = [list[i-1][0], list[i][1]]
-                del list[i-1]
-                del list[i-1]
-                list.append(newRange)
+            if listt[i-1][1]+1 == listt[i][0]:
+                newRange = [listt[i-1][0], listt[i][1]]
+                del listt[i-1]
+                del listt[i-1]
+                listt.append(newRange)
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-            elif list[i][1] < list[i-1][1]:
-                del list[i]
+            elif listt[i][1] > listt[i-1][1] >= listt[i][0]:
+                newRange = [listt[i-1][0], listt[i][1]]
+                del listt[i-1]
+                del listt[i-1]
+                listt.append(newRange)
                 changed = True
-                list.sort()
+                listt.sort()
                 break
-    return list
+            elif listt[i][1] < listt[i-1][1]:
+                del listt[i]
+                changed = True
+                listt.sort()
+                break
+    return listt
 
-def invertRangeList(list):
-    list = mergeList(list)
-    MAX = 62**PASSWORD_SIZE-1
-    if len(list) == 0:
+def invertRangeList(listt):
+    listt = mergeList(listt)
+    #print("DEBUG INVERT:",listt)
+    MAX = 62**PASSWORD_SIZE
+    if len(listt) == 0:
         return [0, MAX]
-    elif len(list) == 1:
-        if list[0][0] == 0:
-            return [list[0][1]+1, MAX]
-        elif list[0][1] == MAX:
-            return [0, list[0][0]-1]
+    elif len(listt) == 1:
+        if listt[0][0] == 0:
+            return [[listt[0][1]+1, MAX]]
+        elif listt[0][1] == MAX:
+            return [[0, listt[0][0]-1]]
+        else:
+            return[[0,listt[0][0]-1],[listt[0][1]+1,MAX]]
     else:
-        newList = []
-        for i in range(len(list)):
+        newlistt = []
+        #print("DEBUG: list",listt)
+        for i in range(len(listt)):
+            #print("DEBUG: element",i,":",listt[i])
             if i == 0:
-                if list[i][0] == 0:
+                #print("DEBUG: first elem")
+                if listt[i][0] == 0:
                     continue
                 else:
-                    newList.append([0, list[i][0]])
+                    newlistt.append([0, listt[i][0]-1])
                 break
-            if i == len(list)-1:
-                if list[i][1] == MAX:
-                    continue
+            #if i == len(listt)-1:
+            else:
+                #print("DEBUG: not first elem")
+                if listt[i][1] == MAX:
+                    pass
                 else:
-                    newList.append([list[i][1],MAX])
-            newList.append([list[i-1][1]+1,list[i][0]-1])
-    return newList
+                    newlistt.append([listt[i][1]+1,MAX])
+                newlistt.append([listt[i-1][1]+1,listt[i][0]-1])
+    #print("newlist ret_",newlistt)
+    return newlistt
 
 class zerg:
     # Get it get it it's a zerg rush
@@ -182,6 +195,11 @@ class zerg:
             for i in range(len(self.verified)):
                 if i == 0:
                     continue
+                if self.verified[i-1] == self.verified[i]:
+                    del self.verified[i]
+                    changed = True
+                    self.verified.sort()
+                    break
                 if self.verified[i-1][1]+1 == self.verified[i][0]:
                     newRange = [self.verified[i-1][0], self.verified[i][1]]
                     del self.verified[i-1]
@@ -212,24 +230,37 @@ class zerg:
     def selectNewRange(self):
         # firstly, tries to find any space not occupied by another slave
         allOccupied = copy.deepcopy(self.verified)
+        #print("DEBUG: peers",self.peers)
+        #print("DEBUG: verified",allOccupied)
         for peer in self.peers.keys():
-            allOccupied.append(peers[peer])
+            allOccupied.append(self.peers[peer])
+        #print("DEBUG: verified after appending peers",allOccupied)
         allOccupied = mergeList(allOccupied)
-        if allOccupied[1]-allOccupied[0] != PASSWORD_SIZE-1:
+        #print("DEBUG: all occypied",allOccupied)
+        if allOccupied[0][1]-allOccupied[0][0] != 62**PASSWORD_SIZE:
             # a space without a slave exists!
             invert = invertRangeList(allOccupied)
+            #print("DEBUG1: invert",invert)
             betterIDX = -1
             betterRNG = 0
+
+            if invert==[]:
+                betterIDX=0
             for i in range(len(invert)):
                 RNG = invert[i][1]-invert[i][0]
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterIDX = i
+
+            #print("DEBUG: betterIDX",betterIDX)
             return invert[betterIDX]
         else:
             # all spaces are occupied by slaves or already checked
             self.updateVerified()
             invert = invertRangeList(self.verified)
+            #print("DEBUG2: verified",self.verified)
+            #print("DEBUG2: invert",invert)
+
             betterIDX = -1
             betterRNG = 0
             for i in range(len(invert)):
@@ -237,7 +268,9 @@ class zerg:
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterIDX = i
-            return invert[betterIDX]
+            print("Better idx",betterIDX)
+            low = int((invert[betterIDX][1] - invert[betterIDX][0])/2)
+            return [low,invert[betterIDX][1]]
 
     def sayHello(self):
         '''Get a hello message'''  # Hello there
@@ -326,7 +359,7 @@ class zerg:
                     self.peers.append(server)
 
     def recvMCAST(self):
-        print("Slave",self.name+":","waiting to recieve. recvmcast")
+        #print("Slave",self.name+":","waiting to recieve. recvmcast")
         try:
             data, server = self.mCastSock.recvfrom(1024)
         except socket.timeout:
@@ -334,10 +367,10 @@ class zerg:
             return
         else:
             #check if we're receiving our own messages
-            print("Slave",self.name+":","recieved:",data,"from",server)
-            print("\n",self.mCastSock,"\n")
+            #print("Slave",self.name+":","recieved:",data,"from",server)
+           # print("\n",self.mCastSock,"\n")
             recvMSG = pickle.loads(data) # I'm here message
-            print("received message:",recvMSG)
+            #print("received message:",recvMSG)
 
             if recvMSG['command']=='hello':
                 print("Slave",self.name+":","recieved hello message:", recvMSG)
@@ -350,10 +383,14 @@ class zerg:
                 for range in peerVerified:
                     self.verified.append(range)
                 self.updateVerified()
-                if peerRange[0]>=self.range[1] and peerRange[1]>=self.range[0]:
+                print("My range:",self.range,"They're range:",peerRange)
+                if peerRange[0]>=self.range[1] or peerRange[1]>=self.range[0]:
                     self.range = self.selectNewRange()
                     self.current = self.range[0]-1
-                    pass #send newrange
+                    print("\n\nIMHERE RESULT: Our ranges overlap! New range:",self.range,"Starting from:",self.current)
+                    #send newrange
+                else: 
+                    print("\n\nIMHERE RESULT: Our ranges don't overlap!")
             elif recvMSG['command']=='newrange':
                 print("Slave",self.name+":","recieved newrange message:", recvMSG)
                 peerRange = recvMSG['range']
@@ -361,11 +398,12 @@ class zerg:
                 # Should this be done here?
                 # if peerRange[0]>=self.range[1] and peerRange[1]>=self.range[0]:
                 #     self.range = self.selectNewRange()
-                #     self.current = self.range[0]-1
+                #     self.current = self.range[0]-1    
                 #     pass #send newrange
             elif recvMSG['command']=='gotall':
                 pass
             elif recvMSG['command']=='foundpw':
+                print("Password found:",recvMSG["password"]+"!","Shutting down...")
                 exit(0) # Shutting down...
             return
 
