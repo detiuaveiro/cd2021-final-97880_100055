@@ -61,7 +61,7 @@ def decode(password, alphabet=BASE62):
 
 def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
     if 0 > idx or idx >= (62**size):
-        print("Idx not in range!")
+        #print("Idx not in range!")
         return
     str = encode(idx, BASE62)
     if len(str) < size:
@@ -233,7 +233,7 @@ class zerg:
         #print("DEBUG: peers",self.peers)
         #print("DEBUG: verified",allOccupied)
         for peer in self.peers.keys():
-            allOccupied.append(self.peers[peer])
+            allOccupied.append(self.peers[peer][1])
         #print("DEBUG: verified after appending peers",allOccupied)
         allOccupied = mergeList(allOccupied)
         #print("DEBUG: all occypied",allOccupied)
@@ -268,7 +268,7 @@ class zerg:
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterIDX = i
-            print("Better idx",betterIDX)
+            #print("Better idx",betterIDX)
             low = int((invert[betterIDX][1] - invert[betterIDX][0])/2)
             return [low,invert[betterIDX][1]]
 
@@ -280,7 +280,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-        print("Slave", self.name+":", "sending HELLO message:", msg)
+        #print("Slave", self.name+":", "sending HELLO message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -296,7 +296,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-        print("Slave", self.name+":", "sending IMHERE message:", msg)
+        #print("Slave", self.name+":", "sending IMHERE message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -309,7 +309,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-        print("Slave", self.name+":", "sending NEWRANGE message:", msg)
+       #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
@@ -322,7 +322,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-        print("Slave", self.name+":", "sending GOTALL message:", msg)
+       #print("Slave", self.name+":", "sending GOTALL message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -335,66 +335,76 @@ class zerg:
             'pw': self.pw
         }
         encodedMSG = pickle.dumps(msg)
-        print("Slave", self.name+":", "sending FOUNDPW message:", msg)
+       #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
         exit(0)
 
-        
+
     def sendMCAST(self, msg):
-        print("Slave", self.name+":", "sending message:", msg)
+       #print("Slave", self.name+":", "sending message:", msg)
         self.mCastSock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(msg, (self.MCAST_GRP, self.MCAST_PORT))
         while True:
-            print("Slave", self.name+":", "waiting to recieve.")
+           #print("Slave", self.name+":", "waiting to recieve.")
             try:
                 data, server = self.mcastSock.recvfrom(1024)
             except socket.timeout:
                 print("Slave", self.name+":", "timed out, no more responses.")
                 break
             else:
-                print("Slave", self.name+":", "recieved:", data, "from", server)
-                if server not in self.peers:
+               #print("Slave", self.name+":", "recieved:", data, "from", server)
+                print("aljfhdgajdshfbkasdjfnksnf")
+                if server not in self.peers.keys():
+                    #how does this not throw an error?????????? -c
+                    print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
+                    print(self.peers)
                     self.peers.append(server)
+                    print("after",self.peers)
+
 
     def recvMCAST(self):
         #print("Slave",self.name+":","waiting to recieve. recvmcast")
         try:
             data, server = self.mCastSock.recvfrom(1024)
         except socket.timeout:
-            print("Slave",self.name+":","timed out, no more responses.")
+           #print("Slave",self.name+":","timed out, no more responses.")
             return
         else:
             #check if we're receiving our own messages
             #print("Slave",self.name+":","recieved:",data,"from",server)
-           # print("\n",self.mCastSock,"\n")
+            #print("\n",self.mCastSock,"\n")
             recvMSG = pickle.loads(data) # I'm here message
             #print("received message:",recvMSG)
-
+            if server in self.peers:
+                self.peers[server]=[time.time(),self.peers[server][1]] #last seen at:
+            else:
+                self.peers[server]=[time.time(),server]
             if recvMSG['command']=='hello':
-                print("Slave",self.name+":","recieved hello message:", recvMSG)
+               #print("Slave",self.name+":","recieved hello message:", recvMSG)
                 self.sayImHere()
             elif recvMSG['command']=='imhere':
-                print("Slave",self.name+":","It's a imhere message:", recvMSG)
+               #print("Slave",self.name+":","It's a imhere message:", recvMSG)
                 peerRange = recvMSG['range']
-                self.peers[server] = peerRange
+                self.peers[server][1] = peerRange
                 peerVerified = recvMSG['verified']
                 for range in peerVerified:
                     self.verified.append(range)
                 self.updateVerified()
-                print("My range:",self.range,"They're range:",peerRange)
+               #print("My range:",self.range,"They're range:",peerRange)
                 if peerRange[0]>=self.range[1] or peerRange[1]>=self.range[0]:
                     self.range = self.selectNewRange()
                     self.current = self.range[0]-1
-                    print("\n\nIMHERE RESULT: Our ranges overlap! New range:",self.range,"Starting from:",self.current)
+                   #print("\n\nIMHERE RESULT: Our ranges overlap! New range:",self.range,"Starting from:",self.current)
                     #send newrange
                 else: 
-                    print("\n\nIMHERE RESULT: Our ranges don't overlap!")
+                   #print("\n\nIMHERE RESULT: Our ranges don't overlap!")
+                   pass
             elif recvMSG['command']=='newrange':
-                print("Slave",self.name+":","recieved newrange message:", recvMSG)
+               #print("Slave",self.name+":","recieved newrange message:", recvMSG)
                 peerRange = recvMSG['range']
-                self.peers[server] = peerRange
+                self.peers[server][1] = peerRange
                 # Should this be done here?
                 # if peerRange[0]>=self.range[1] and peerRange[1]>=self.range[0]:
                 #     self.range = self.selectNewRange()
@@ -403,7 +413,7 @@ class zerg:
             elif recvMSG['command']=='gotall':
                 pass
             elif recvMSG['command']=='foundpw':
-                print("Password found:",recvMSG["password"]+"!","Shutting down...")
+               #print("Password found:",recvMSG["password"]+"!","Shutting down...")
                 exit(0) # Shutting down...
             return
 
@@ -421,7 +431,7 @@ class zerg:
 
         httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  # internet says to use carriage return but not sure why
 
-        print("testing pw:", pw)
+       #print("testing pw:", pw)
         msg = httpHeader
         self.send_msg(msg)
 
@@ -445,7 +455,7 @@ class zerg:
         if '200' in incoming.split("\n")[0]:
             self.found = True
             self.pw = getPWfromIDX(self.current, PASSWORD_SIZE)
-            print("GOT IT!\nwas it "+self.pw+"?")
+           #print("GOT IT!\nwas it "+self.pw+"?")
 
     def loop(self):
         self.sayHello()
@@ -453,7 +463,7 @@ class zerg:
             #print("time now:",time.time())
             #print("target time:",self.lastTry + COOLDOWN_TIME/1000)
             if time.time()>self.lastTry + COOLDOWN_TIME/1000:  # TODO - verify  that cooldown time has passed since last time
-                print("all your base are belong to us")  # nice ref :D
+               #print("all your base are belong to us")  # nice ref :D
                 toTest = []
                 full = False
                 for i in range(MIN_TRIES):  # get next MIN_TRIES passwords from ids
@@ -465,7 +475,7 @@ class zerg:
                     self.addToVerifiedNum(self.current)
                     if self.found:
                         # send FOUNDPW message
-                        print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
+                       #print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
@@ -473,6 +483,15 @@ class zerg:
                     pass
                     # send GOTALL message
             # The usual method for event treatment
+
+            print("current peers: ",self.peers)
+            for peer in self.peers.keys():
+                #print("old time: ",self.peers[peer][0])
+                #print("new time: ",time.time() - 5)
+                if self.peers[peer][0] < time.time() - 5 and time.time() - 15!=0 :
+                 #   print("took too long bye")
+                    self.peers.pop(peer)
+                    break
             toDo = self.sel.select(0)
             for event, data in toDo:
                 callback = event.data
