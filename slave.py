@@ -72,6 +72,7 @@ def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
 
 def mergeList(listt):
     '''Smoothes out the Verified array, removing duplicates and merging adjacent arrays'''
+    #print("listt::" ,listt)
     listt.sort()
     changed = True
     while changed:
@@ -232,9 +233,11 @@ class zerg:
         allOccupied = copy.deepcopy(self.verified)
         #print("DEBUG: peers",self.peers)
         #print("DEBUG: verified",allOccupied)
+      #  print("peer List:",self.peers)
         for peer in self.peers.keys():
             allOccupied.append(self.peers[peer][1])
-        #print("DEBUG: verified after appending peers",allOccupied)
+      #  print("DEBUG: verified after appending peers",allOccupied)
+
         allOccupied = mergeList(allOccupied)
         #print("DEBUG: all occypied",allOccupied)
         if allOccupied[0][1]-allOccupied[0][0] != 62**PASSWORD_SIZE:
@@ -246,14 +249,15 @@ class zerg:
 
             if invert==[]:
                 betterIDX=0
-            for i in range(len(invert)):
-                RNG = invert[i][1]-invert[i][0]
-                if RNG > betterRNG:
-                    betterRNG = RNG
-                    betterIDX = i
+            #for i in range(len(invert)):
+            #    RNG = invert[i][1]-invert[i][0]
+            #    if RNG > betterRNG:
+            #        betterRNG = RNG
+            #        betterIDX = i
 
+            partToPick=random.randint(0,len(invert)-1)
             #print("DEBUG: betterIDX",betterIDX)
-            return invert[betterIDX]
+            return invert[partToPick]
         else:
             # all spaces are occupied by slaves or already checked
             self.updateVerified()
@@ -355,13 +359,13 @@ class zerg:
                 break
             else:
                #print("Slave", self.name+":", "recieved:", data, "from", server)
-                print("aljfhdgajdshfbkasdjfnksnf")
+                #print("aljfhdgajdshfbkasdjfnksnf")
                 if server not in self.peers.keys():
                     #how does this not throw an error?????????? -c
-                    print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
-                    print(self.peers)
-                    self.peers.append(server)
-                    print("after",self.peers)
+                   # print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
+                   # print(self.peers)
+                    self.peers[server]=[-1,[0,0]]
+                    #print("after",self.peers)
 
 
     def recvMCAST(self):
@@ -380,7 +384,7 @@ class zerg:
             if server in self.peers:
                 self.peers[server]=[time.time(),self.peers[server][1]] #last seen at:
             else:
-                self.peers[server]=[time.time(),server]
+                self.peers[server]=[time.time(),[0,0]]
             if recvMSG['command']=='hello':
                #print("Slave",self.name+":","recieved hello message:", recvMSG)
                 self.sayImHere()
@@ -431,7 +435,7 @@ class zerg:
 
         httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  # internet says to use carriage return but not sure why
 
-       #print("testing pw:", pw)
+        print("testing pw:", pw)
         msg = httpHeader
         self.send_msg(msg)
 
@@ -455,7 +459,8 @@ class zerg:
         if '200' in incoming.split("\n")[0]:
             self.found = True
             self.pw = getPWfromIDX(self.current, PASSWORD_SIZE)
-           #print("GOT IT!\nwas it "+self.pw+"?")
+            print("GOT IT!\nwas it "+self.pw+"?")
+            self.foundPw()
 
     def loop(self):
         self.sayHello()
@@ -484,7 +489,7 @@ class zerg:
                     # send GOTALL message
             # The usual method for event treatment
 
-            print("current peers: ",self.peers)
+            #print("current peers: ",self.peers)
             for peer in self.peers.keys():
                 #print("old time: ",self.peers[peer][0])
                 #print("new time: ",time.time() - 5)
