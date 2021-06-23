@@ -333,19 +333,6 @@ class zerg:
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
 
-    def sayNewRange(self):
-        '''Get a newrange message'''  # General Kenobi
-        msg = {
-            'command': 'newrange',
-            'range': self.range
-        }
-        encodedMSG = pickle.dumps(msg)
-
-        #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
-        self.mCastSock.setsockopt(
-            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-        self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
-
     def sayFoundPW(self):
         '''Get a foundpw message'''  # General Kenobi
         msg = {
@@ -359,45 +346,7 @@ class zerg:
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
         
-    def newRange(self):
-        '''Get a newrange message'''  # this is mine now
-        msg = {
-            'command': 'newrange',
-            'range': self.range
-        }
-        encodedMSG = pickle.dumps(msg)
-
-        #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
-        self.mCastSock.setsockopt(
-            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-        self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
-        
-
-    def gotAll(self):
-        '''Get a gotall message'''   # my work here is done
-        msg = {
-            'command': 'gotall'
-        }
-        encodedMSG = pickle.dumps(msg)
-
-        #print("Slave", self.name+":", "sending GOTALL message:", msg)
-        self.mCastSock.setsockopt(
-            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-        self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
-
-
-    def foundPw(self):  # the 200 ok marks the spot
-        '''Get a gotall message'''
-        msg = {
-            'command': 'foundpw',
-            'pw': self.pw
-        }
-        encodedMSG = pickle.dumps(msg)
-        #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
-        self.mCastSock.setsockopt(
-            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-        self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
-        exit(0)
+    
 
 
     def sendMCAST(self, msg):
@@ -529,7 +478,7 @@ class zerg:
             self.found = True
             self.pw = getPWfromIDX(self.current, PASSWORD_SIZE)
             print("GOT IT!\nwas it "+self.pw+"?")
-            self.foundPw()
+            self.sayFoundPW()
 
     def loop(self):
         self.sayHello()
@@ -556,6 +505,7 @@ class zerg:
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
+                print(time.ctime(time.time()),": VERIFIED =",self.verified)
                 if full:
                     #print("Reached the end of my rope! Choosing a new range.")
                     self.range = self.selectNewRange()
@@ -580,3 +530,58 @@ class zerg:
 
 slave = zerg("Brood1")
 slave.loop()
+
+#################### OLD
+
+# def newRange(self):
+    #     '''Get a newrange message'''  # this is mine now
+    #     msg = {
+    #         'command': 'newrange',
+    #         'range': self.range
+    #     }
+    #     encodedMSG = pickle.dumps(msg)
+
+    #     #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
+    #     self.mCastSock.setsockopt(
+    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+    #     self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
+        
+
+    # def gotAll(self):
+    #     '''Get a gotall message'''   # my work here is done
+    #     msg = {
+    #         'command': 'gotall'
+    #     }
+    #     encodedMSG = pickle.dumps(msg)
+
+    #     #print("Slave", self.name+":", "sending GOTALL message:", msg)
+    #     self.mCastSock.setsockopt(
+    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+    #     self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
+
+
+    # def foundPw(self):  # the 200 ok marks the spot
+    #     '''Get a gotall message'''
+    #     msg = {
+    #         'command': 'foundpw',
+    #         'pw': self.pw
+    #     }
+    #     encodedMSG = pickle.dumps(msg)
+    #     #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
+    #     self.mCastSock.setsockopt(
+    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+    #     self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
+    #     exit(0)
+
+        # def sayNewRange(self):
+    #     '''Get a newrange message'''  # General Kenobi
+    #     msg = {
+    #         'command': 'newrange',
+    #         'range': self.range
+    #     }
+    #     encodedMSG = pickle.dumps(msg)
+
+    #     #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
+    #     self.mCastSock.setsockopt(
+    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+    #     self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
