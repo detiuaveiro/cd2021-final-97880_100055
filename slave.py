@@ -209,6 +209,11 @@ class zerg:
         if r1[0] <= r2[1] and r1[1] >= r2[0]: return True
         else: return False
 
+    def isVerified(self, num : int):
+        for i in range(len(self.verified)):
+            if self.verified[i][0] >= num >= self.verified[i][1]: return True
+        return False
+
     def updateVerified(self):
         '''Smoothes out the Verified array, removing duplicates and merging adjacent arrays'''
         self.verified.sort()
@@ -253,31 +258,34 @@ class zerg:
     def selectNewRange(self):
         # firstly, tries to find any space not occupied by another slave
         self.updateVerified()
-        print("Deciding a new range!")
-        print("\tVerified:",self.verified)
-        print("\tPeer ranges:",self.peers)
+        #print("Deciding a new range!")
+        #print("\tVerified:",self.verified)
+        #print("\tPeer ranges:",self.peers)
         allOccupied = copy.deepcopy(self.verified)
         for peer in self.peers.keys():
             allOccupied.append(self.peers[peer][1])
         allOccupied = mergeList(allOccupied)
         if allOccupied[0][1]-allOccupied[0][0] != 62**PASSWORD_SIZE:
-            # a space without an active slave exists! -> immediately occupates the biggest space like this
-            print("Found at least one empty space! Occupying the biggest.")
+            # a space without an active slave exists! -> immediately occupies the biggest space like this
+            #print("Found at least one empty space! Occupying the biggest.")
             invert = invertRangeList(allOccupied)
             betterIDX = -1
-            betterRNG = 0
+            betterRNG = 62**PASSWORD_SIZE+1
             for i in range(len(invert)):
                 RNG = invert[i][1]-invert[i][0]
-                if RNG > betterRNG:
+                if RNG < betterRNG:
                     betterRNG = RNG
                     betterIDX = i
 
             #partToPick=random.randint(0,len(invert)-1)
             #print("DEBUG: betterIDX",betterIDX)
-            return invert[betterIDX]
+            if betterRNG > 30*PASSWORD_SIZE:
+                return [invert[betterIDX][0],invert[betterIDX][0]+30*PASSWORD_SIZE]
+            else:
+                return invert[betterIDX]
         else:
             # all spaces are occupied by slaves or already checked -> choses the peer with the biggest workload, and divides it
-            print("No empty spaces, stealing from a peer.")
+            #print("No empty spaces, stealing from a peer.")
             #self.updateVerified()
             #invert = invertRangeList(self.verified)
             #print("DEBUG2: verified",self.verified)
@@ -290,7 +298,7 @@ class zerg:
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterPeer = peer
-            print("It would seems peer",betterPeer,"is the most overworked, taking from them!")
+            #print("It would seems peer",betterPeer,"is the most overworked, taking from them!")
             #print("Better idx",betterIDX)
             low = int((self.peers[betterPeer][1][1] - self.peers[betterPeer][1][0])/2)
             return [low,self.peers[betterPeer][1][1]]
@@ -307,7 +315,8 @@ class zerg:
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
-        self.range = [0, 62**PASSWORD_SIZE]
+        #self.range = [0, 62**PASSWORD_SIZE]
+        self.range = [0,30*PASSWORD_SIZE]
         self.current = self.range[0]-1
 
     def sayImHere(self):
@@ -432,47 +441,49 @@ class zerg:
             else:
                 self.peers[server]=[time.time(),[0,0]]
             if recvMSG['command']=='hello':
-                print("Recieved HELLO message:", recvMSG,"from",server)
+                #print("Recieved HELLO message:", recvMSG,"from",server,"\n\n")
                 self.sayImHere()
             elif recvMSG['command']=='imhere':
                 #print("Slave",self.name+":","It's a imhere message:", recvMSG)
-                print("Recieved IMHERE message:", recvMSG,"from",server)
+                #print("Recieved IMHERE message:", recvMSG,"from",server)
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
                 peerVerified = recvMSG['verified']
                 for range in peerVerified:
                     self.verified.append(range)
                 self.updateVerified()
-                print("My range:",self.range,"They're range:",peerRange)
+                #print("My range:",self.range,"They're range:",peerRange)
                 if self.rangeOverlaps(peerRange):
                     if self.compareAddr(server[0]) < 0:
-                        print("Our ranges overlap! Changing mine.")
+                        #print("Our ranges overlap! Changing mine.")
                         #I need to adjust my range
                         self.range = self.selectNewRange()
-                        print("Decided on:",self.range)
+                        #print("Decided on:",self.range)
                         self.current = self.range[0]-1
-                        self.sayNewRange()
-                        print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
+                        #self.sayNewRange()
+                        #print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
                     else:
-                        print("IMHERE RESULT: Our ranges overlap! But I don't have to change. Continuing...","\n\n")
+                        #print("IMHERE RESULT: Our ranges overlap! But I don't have to change. Continuing...","\n\n")
+                        pass
                 else: 
-                    print("IMHERE RESULT: Our ranges don't overlap!","\n\n")
+                    #print("IMHERE RESULT: Our ranges don't overlap!","\n\n")
                     pass
             elif recvMSG['command']=='newrange':
-                print("Recieved NEWRANGE message:", recvMSG,"from",server)
+                #print("Recieved NEWRANGE message:", recvMSG,"from",server)
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
-                print("My range:",self.range,"They're range:",peerRange)
+                #print("My range:",self.range,"They're range:",peerRange)
                 if self.rangeOverlaps(peerRange):
-                    print("NEW RANGE RESULT: Our ranges overlap! Someone is trying to offload some of my work.") 
-                    self.range[1] = peerRange[0]
-                    print("New range:",self.range,"Continuing from:",self.current,"\n\n")
+                    #print("NEW RANGE RESULT: Our ranges overlap! Someone is trying to offload some of my work.") 
+                    pass
+                    #print("New range:",self.range,"Continuing from:",self.current,"\n\n")
                 else:
-                    print("NEW RANGE RESULT: Our ranges don't overlap! Peer updated.","\n\n")
+                    #print("NEW RANGE RESULT: Our ranges don't overlap! Peer updated.","\n\n")
+                    pass
             elif recvMSG['command']=='gotall':
                 pass
             elif recvMSG['command']=='foundpw':
-                print("Password found:",recvMSG["password"]+"!","Shutting down...")
+                print("Password found:",recvMSG["pw"]+"!","Shutting down...")
                 exit(0) # Shutting down...
             return
 
@@ -490,7 +501,7 @@ class zerg:
 
         httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  # internet says to use carriage return but not sure why
 
-        print("testing pw:", pw)
+        #print("testing pw:", pw)
         msg = httpHeader
         self.send_msg(msg)
 
@@ -526,6 +537,7 @@ class zerg:
             #print("time now:",time.time())
             #print("target time:",self.lastTry + COOLDOWN_TIME/1000)
             if time.time()>self.lastTry + COOLDOWN_TIME/1000:  # TODO - verify  that cooldown time has passed since last time
+                print(time.ctime(time.time()),": MY RANGE =",self.range)
                 #print("all your base are belong to us")  # nice ref :D
                 toTest = []
                 full = False
@@ -534,9 +546,10 @@ class zerg:
                     if self.current > self.range[1]:
                         full = True
                         break
+                    if self.isVerified(self.current): continue
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
                     self.addToVerifiedNum(self.current)
-                    self.range[0] = self.current+1
+                    #self.range[0] = self.current+1
                     if self.found:
                         # send FOUNDPW message
                         #print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
@@ -544,8 +557,12 @@ class zerg:
                 self.lastTry = time.time()
                 self.sayImHere()
                 if full:
+                    #print("Reached the end of my rope! Choosing a new range.")
+                    self.range = self.selectNewRange()
+                    self.current = self.range[0]-1
+                    #print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
                     pass
-                    # send GOTALL message
+
             # The usual method for event treatment
 
             #print("current peers: ",self.peers)
