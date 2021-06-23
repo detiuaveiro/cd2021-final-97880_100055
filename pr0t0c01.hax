@@ -10,17 +10,21 @@ Update msg - sent after n passwords tries from each client, contains the list wi
 ### IDEA
 
 Data Structures (slave):
+!!!!!!!!
+id -> slave identifier
+jointime -> time at which the slave joined the network, used to calculate the identifier
 range -> [start end], meaning this slave is currently searching between passwords start and end
 current -> int, the last password the slave verified, meaning every password between start and current have been verified
 verified -> [[0 10000] [30000 62^2]], array with all confirmed password ranges that have been verified, sorted
 peers -> {peer, peerRange}, array that stores the peers that are presumably alive at the moment, and the ranges they are currently exploring
 
 Messages:
-HELLO (args: none) MULTICAST -> sent by a slave that just joined the network
+!!!!!!!!
+HELLO (args: id, jointime) MULTICAST -> sent by a slave that just joined the network
                                 if, after a timeout, no IMHERE response is had, assumes is alone
                                 when another slave recieves this message, saves the new slave in peers dict initialized with range [-2,-1] and responds with an IMHERE
-
-IMHERE (args: verified, range) MULTICAST -> sent in response to an HELLO or GOTALL message, also whenever the slave is waiting its cooldown time
+!!!!!!!!
+IMHERE (args: verified, range, jointime) MULTICAST -> sent in response to an HELLO or GOTALL message, also whenever the slave is waiting its cooldown time
                                   when another slave recieves this message, updates their verified array to match what the other has already done and responds with a NEWRANGE
 
 NEWRANGE (args: range) MULTICAST -> sent in response to an IMHERE message after the slave has decided their new range

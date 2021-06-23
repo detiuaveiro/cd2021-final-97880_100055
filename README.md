@@ -44,3 +44,8 @@ docker run -d --name server server
 # to delete
 docker stop server
 docker rm server
+
+# venv
+
+$ source venv/bin/activate
+$ ./setup.sh

@@ -151,6 +151,9 @@ class zerg:
     # until we can bamboozle the server that is
 
     def __init__(self, name: str = ""):
+        # identifier
+        #self.timejoin = time.time()
+
         # --Init Variables n stuff we'll need----
         self.sel = selectors.DefaultSelector()
         self.name = name
@@ -186,6 +189,25 @@ class zerg:
         self.latest_pws = list()
         self.lastTry=0
         self.connect()
+
+        hostname = socket.gethostname()
+        self.address = socket.gethostbyname(hostname)
+
+    def compareAddr(self, address : str):
+        myFields = self.address.split(".")
+        theirFields = address.split(".")
+        for i in range(4):
+            myF = int(myFields[i])
+            theirF = int(theirFields[i])
+            if myF == theirF: continue
+            elif myF > theirF: return 1
+            else: return -1
+        return 0 
+
+    def rangeOverlaps(self, r2 : list):
+        r1 = self.range
+        if r1[0] <= r2[1] and r1[1] >= r2[0]: return True
+        else: return False
 
     def updateVerified(self):
         '''Smoothes out the Verified array, removing duplicates and merging adjacent arrays'''
@@ -230,41 +252,18 @@ class zerg:
 
     def selectNewRange(self):
         # firstly, tries to find any space not occupied by another slave
+        self.updateVerified()
+        print("Deciding a new range!")
+        print("\tVerified:",self.verified)
+        print("\tPeer ranges:",self.peers)
         allOccupied = copy.deepcopy(self.verified)
-        #print("DEBUG: peers",self.peers)
-        #print("DEBUG: verified",allOccupied)
-      #  print("peer List:",self.peers)
         for peer in self.peers.keys():
             allOccupied.append(self.peers[peer][1])
-      #  print("DEBUG: verified after appending peers",allOccupied)
-
         allOccupied = mergeList(allOccupied)
-        #print("DEBUG: all occypied",allOccupied)
         if allOccupied[0][1]-allOccupied[0][0] != 62**PASSWORD_SIZE:
-            # a space without a slave exists!
+            # a space without an active slave exists! -> immediately occupates the biggest space like this
+            print("Found at least one empty space! Occupying the biggest.")
             invert = invertRangeList(allOccupied)
-            #print("DEBUG1: invert",invert)
-            betterIDX = -1
-            betterRNG = 0
-
-            if invert==[]:
-                betterIDX=0
-            #for i in range(len(invert)):
-            #    RNG = invert[i][1]-invert[i][0]
-            #    if RNG > betterRNG:
-            #        betterRNG = RNG
-            #        betterIDX = i
-
-            partToPick=random.randint(0,len(invert)-1)
-            #print("DEBUG: betterIDX",betterIDX)
-            return invert[partToPick]
-        else:
-            # all spaces are occupied by slaves or already checked
-            self.updateVerified()
-            invert = invertRangeList(self.verified)
-            #print("DEBUG2: verified",self.verified)
-            #print("DEBUG2: invert",invert)
-
             betterIDX = -1
             betterRNG = 0
             for i in range(len(invert)):
@@ -272,9 +271,29 @@ class zerg:
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterIDX = i
+
+            #partToPick=random.randint(0,len(invert)-1)
+            #print("DEBUG: betterIDX",betterIDX)
+            return invert[betterIDX]
+        else:
+            # all spaces are occupied by slaves or already checked -> choses the peer with the biggest workload, and divides it
+            print("No empty spaces, stealing from a peer.")
+            #self.updateVerified()
+            #invert = invertRangeList(self.verified)
+            #print("DEBUG2: verified",self.verified)
+            #print("DEBUG2: invert",invert)
+
+            betterPeer = -1
+            betterRNG = 0
+            for peer in self.peers.keys():
+                RNG = self.peers[peer][1][1]-self.peers[peer][1][0]
+                if RNG > betterRNG:
+                    betterRNG = RNG
+                    betterPeer = peer
+            print("It would seems peer",betterPeer,"is the most overworked, taking from them!")
             #print("Better idx",betterIDX)
-            low = int((invert[betterIDX][1] - invert[betterIDX][0])/2)
-            return [low,invert[betterIDX][1]]
+            low = int((self.peers[betterPeer][1][1] - self.peers[betterPeer][1][0])/2)
+            return [low,self.peers[betterPeer][1][1]]
 
     def sayHello(self):
         '''Get a hello message'''  # Hello there
@@ -284,7 +303,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-        #print("Slave", self.name+":", "sending HELLO message:", msg)
+        #print("Sending HELLO message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -296,11 +315,37 @@ class zerg:
         msg = {
             'command': 'imhere',
             'verified': self.verified,  # twitter famous
+            'range': self.range,
+        }
+        encodedMSG = pickle.dumps(msg)
+
+        #print("Sending IMHERE message:", msg)
+        self.mCastSock.setsockopt(
+            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+        self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
+
+    def sayNewRange(self):
+        '''Get a newrange message'''  # General Kenobi
+        msg = {
+            'command': 'newrange',
             'range': self.range
         }
         encodedMSG = pickle.dumps(msg)
 
-        #print("Slave", self.name+":", "sending IMHERE message:", msg)
+        #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
+        self.mCastSock.setsockopt(
+            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
+        self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
+
+    def sayFoundPW(self):
+        '''Get a foundpw message'''  # General Kenobi
+        msg = {
+            'command': 'foundpw',
+            'pw': self.pw
+        }
+        encodedMSG = pickle.dumps(msg)
+
+        #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -313,7 +358,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-       #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
+        #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
@@ -326,7 +371,7 @@ class zerg:
         }
         encodedMSG = pickle.dumps(msg)
 
-       #print("Slave", self.name+":", "sending GOTALL message:", msg)
+        #print("Slave", self.name+":", "sending GOTALL message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
@@ -339,7 +384,7 @@ class zerg:
             'pw': self.pw
         }
         encodedMSG = pickle.dumps(msg)
-       #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
+        #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
@@ -347,23 +392,23 @@ class zerg:
 
 
     def sendMCAST(self, msg):
-       #print("Slave", self.name+":", "sending message:", msg)
+        #print("Slave", self.name+":", "sending message:", msg)
         self.mCastSock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(msg, (self.MCAST_GRP, self.MCAST_PORT))
         while True:
-           #print("Slave", self.name+":", "waiting to recieve.")
+            #print("Slave", self.name+":", "waiting to recieve.")
             try:
                 data, server = self.mcastSock.recvfrom(1024)
             except socket.timeout:
-                print("Slave", self.name+":", "timed out, no more responses.")
+                print("timed out, no more responses.")
                 break
             else:
-               #print("Slave", self.name+":", "recieved:", data, "from", server)
+                #print("Slave", self.name+":", "recieved:", data, "from", server)
                 #print("aljfhdgajdshfbkasdjfnksnf")
                 if server not in self.peers.keys():
                     #how does this not throw an error?????????? -c
-                   # print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
-                   # print(self.peers)
+                    # print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
+                    # print(self.peers)
                     self.peers[server]=[-1,[0,0]]
                     #print("after",self.peers)
 
@@ -372,8 +417,9 @@ class zerg:
         #print("Slave",self.name+":","waiting to recieve. recvmcast")
         try:
             data, server = self.mCastSock.recvfrom(1024)
+            #print("\n\n!!!!",server,"\n\n")
         except socket.timeout:
-           #print("Slave",self.name+":","timed out, no more responses.")
+            #print("Slave",self.name+":","timed out, no more responses.")
             return
         else:
             #check if we're receiving our own messages
@@ -386,38 +432,47 @@ class zerg:
             else:
                 self.peers[server]=[time.time(),[0,0]]
             if recvMSG['command']=='hello':
-               #print("Slave",self.name+":","recieved hello message:", recvMSG)
+                print("Recieved HELLO message:", recvMSG,"from",server)
                 self.sayImHere()
             elif recvMSG['command']=='imhere':
-               #print("Slave",self.name+":","It's a imhere message:", recvMSG)
+                #print("Slave",self.name+":","It's a imhere message:", recvMSG)
+                print("Recieved IMHERE message:", recvMSG,"from",server)
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
                 peerVerified = recvMSG['verified']
                 for range in peerVerified:
                     self.verified.append(range)
                 self.updateVerified()
-               #print("My range:",self.range,"They're range:",peerRange)
-                if peerRange[0]>=self.range[1] or peerRange[1]>=self.range[0]:
-                    self.range = self.selectNewRange()
-                    self.current = self.range[0]-1
-                   #print("\n\nIMHERE RESULT: Our ranges overlap! New range:",self.range,"Starting from:",self.current)
-                    #send newrange
+                print("My range:",self.range,"They're range:",peerRange)
+                if self.rangeOverlaps(peerRange):
+                    if self.compareAddr(server[0]) < 0:
+                        print("Our ranges overlap! Changing mine.")
+                        #I need to adjust my range
+                        self.range = self.selectNewRange()
+                        print("Decided on:",self.range)
+                        self.current = self.range[0]-1
+                        self.sayNewRange()
+                        print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
+                    else:
+                        print("IMHERE RESULT: Our ranges overlap! But I don't have to change. Continuing...","\n\n")
                 else: 
-                   #print("\n\nIMHERE RESULT: Our ranges don't overlap!")
-                   pass
+                    print("IMHERE RESULT: Our ranges don't overlap!","\n\n")
+                    pass
             elif recvMSG['command']=='newrange':
-               #print("Slave",self.name+":","recieved newrange message:", recvMSG)
+                print("Recieved NEWRANGE message:", recvMSG,"from",server)
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
-                # Should this be done here?
-                # if peerRange[0]>=self.range[1] and peerRange[1]>=self.range[0]:
-                #     self.range = self.selectNewRange()
-                #     self.current = self.range[0]-1    
-                #     pass #send newrange
+                print("My range:",self.range,"They're range:",peerRange)
+                if self.rangeOverlaps(peerRange):
+                    print("NEW RANGE RESULT: Our ranges overlap! Someone is trying to offload some of my work.") 
+                    self.range[1] = peerRange[0]
+                    print("New range:",self.range,"Continuing from:",self.current,"\n\n")
+                else:
+                    print("NEW RANGE RESULT: Our ranges don't overlap! Peer updated.","\n\n")
             elif recvMSG['command']=='gotall':
                 pass
             elif recvMSG['command']=='foundpw':
-               #print("Password found:",recvMSG["password"]+"!","Shutting down...")
+                print("Password found:",recvMSG["password"]+"!","Shutting down...")
                 exit(0) # Shutting down...
             return
 
@@ -455,6 +510,9 @@ class zerg:
             except UnicodeDecodeError:
                 # I think we're supposed to receive a picture here but this is a puzzle for future camila :P
                 break
+            else:
+                #print("\n\n!!!!!",incoming,"\n\n")
+                pass
 
         if '200' in incoming.split("\n")[0]:
             self.found = True
@@ -468,7 +526,7 @@ class zerg:
             #print("time now:",time.time())
             #print("target time:",self.lastTry + COOLDOWN_TIME/1000)
             if time.time()>self.lastTry + COOLDOWN_TIME/1000:  # TODO - verify  that cooldown time has passed since last time
-               #print("all your base are belong to us")  # nice ref :D
+                #print("all your base are belong to us")  # nice ref :D
                 toTest = []
                 full = False
                 for i in range(MIN_TRIES):  # get next MIN_TRIES passwords from ids
@@ -478,9 +536,10 @@ class zerg:
                         break
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
                     self.addToVerifiedNum(self.current)
+                    self.range[0] = self.current+1
                     if self.found:
                         # send FOUNDPW message
-                       #print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
+                        #print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
@@ -494,7 +553,7 @@ class zerg:
                 #print("old time: ",self.peers[peer][0])
                 #print("new time: ",time.time() - 5)
                 if self.peers[peer][0] < time.time() - 5 and time.time() - 15!=0 :
-                 #   print("took too long bye")
+                    #print("took too long bye")
                     self.peers.pop(peer)
                     break
             toDo = self.sel.select(0)
