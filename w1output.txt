@@ -1,0 +1,5 @@
+I AM: 172.17.0.5
+Fri Jun 25 11:24:02 2021 : MY RANGE = [0, 29]
+Fri Jun 25 11:24:03 2021 : VERIFIED = [[0, 9]]
+Fri Jun 25 11:24:03 2021 : MY RANGE = [30, 59]
+Fri Jun 25 11:24:04 2021 : VERIFIED = [[0, 9], [30, 39]]

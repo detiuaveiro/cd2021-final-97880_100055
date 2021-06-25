@@ -61,9 +61,12 @@ def decode(password, alphabet=BASE62):
 # UTILITY FUNCTIONS:
 
 def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
+    #print("size:",size)
     if 0 > idx or idx >= (62**size):
-        #print("Idx not in range!")
-        return
+        print("Idx not in range!")
+        print("idx:",idx)
+        print("range:",62**size)
+        return "a"
     str = encode(idx, BASE62)
     if len(str) < size:
         diff = size - len(str)
