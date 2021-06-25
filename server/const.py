@@ -13,7 +13,7 @@ MAX_VALIDATE = 100
 MIN_TRIES = 10
 MAX_TRIES = 20
 
-PASSWORD_SIZE = os.environ.get('PASSWORD_SIZE', default =1)
+PASSWORD_SIZE = os.environ.get('PASSWORD_SIZE', default =3)
 
 if __name__ == "__main__":
 	print(PASSWORD_SIZE) 
