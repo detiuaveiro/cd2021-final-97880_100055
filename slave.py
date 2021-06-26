@@ -424,14 +424,20 @@ class zerg:
     def victory(self):
         picture_raw=b""
         incoming_parts=b""
-        while not  b"\xFF\xD9" in incoming_parts:
-            incoming_parts = self.s.recv(50)
-            print("received: ",incoming_parts)
-            picture_raw=picture_raw+incoming_parts.replace('\r\n','')
-           # print(picture_raw,"\n---------------------\n\n\n")
+        while not  b"\xFF\xD9" in picture_raw: #end of jpg
+            incoming_parts = self.s.recv(1)
+            #print("very rawreceived",incoming_parts)
+            #if incoming_parts.match("\\x[0-9A-F][0-9A-F]"):
+            picture_raw=picture_raw+incoming_parts.replace(b'\r\n',b'')
+
+            #print(" rawreceived: ",incoming_parts.split(b'\r\n')[1])
+
+            #print("received: ",incoming_parts.decode())
+            #print(picture_raw,"\n---------------------\n\n\n")
 
 
         picture_raw=b"\xFF\xD8"+picture_raw.split(b"\xFF\xD8")[1]
+        print("pic raw:",picture_raw.decode())
         with open("success.jpg", "wb") as img:
             img.write(picture_raw)
         data = open("success.jpg", "rb").read()

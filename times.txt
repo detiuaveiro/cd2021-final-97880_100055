@@ -1,3 +1,0 @@
-real	0m1.299s
-real	0m1.221s
-Traceback (most recent call last):
