@@ -72,15 +72,24 @@ def rangeOverlaps(r1 : list, r2 : list):
         if r1[0] <= r2[1] and r1[1] >= r2[0]: return True
         else: return False
 
-testlist = [[0,465],[122,122]]
-testlist.sort()
+def contains(r1 : list, r2 : list):
+    if r1[0]<=r2[0] and r2[1]<=r1[1]:
+        return True
+    return False
 
-print(testlist)
-testlist=mergeList(testlist)
+r1 = [10,20]
+r2 = [10,20]
+print(contains(r1,r2))
 
-print(testlist)
-testlist=mergeList(testlist)
-print(testlist)
+# testlist = [[0,465],[122,122]]
+# testlist.sort()
+
+# print(testlist)
+# testlist=mergeList(testlist)
+
+# print(testlist)
+# testlist=mergeList(testlist)
+# print(testlist)
 # testlist =invertRangeList(testlist)
 # print(testlist)
 

@@ -3,9 +3,7 @@ from const import *
 import base64
 import socket
 import struct
-import itertools
 import selectors
-import random
 import time
 import string
 import pickle
@@ -71,7 +69,7 @@ def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
     if len(str) < size:
         diff = size - len(str)
         for i in range(diff):
-            str = "a" + str
+            str = BASE62[0] + str
     return str
 
 def overlaps(r1 : list, r2 : list):
@@ -137,6 +135,11 @@ def compareAddr(myAddr : str, theirAddr : str):
             else: return -1
         return 0 
 
+def contains(r1 : list, r2 : list):
+    if r1[0]<=r2[0] and r2[1]<=r1[1]:
+        return True
+    return False
+
 class zerg:
     # Get it get it it's a zerg rush
     # StarCraft ref - they're played by bruteforce :D
@@ -190,6 +193,12 @@ class zerg:
     def isVerified(self, num : int):
         for i in range(len(self.verified)):
             if self.verified[i][0] >= num >= self.verified[i][1]: return True
+        return False
+    
+    def isRangeVerified(self):
+        for i in range(len(self.verified)):
+            if contains(self.verified[i],self.range):
+                return True
         return False
 
     def updateVerified(self):
@@ -412,34 +421,59 @@ class zerg:
         self.s.send(encoded_msg)
         self.server_response()
 
+    def victory(self):
+        picture_raw=b""
+        incoming_parts=b""
+        while not  b"\xFF\xD9" in incoming_parts:
+            incoming_parts = self.s.recv(50)
+            print("received: ",incoming_parts)
+            picture_raw=picture_raw+incoming_parts.replace('\r\n','')
+           # print(picture_raw,"\n---------------------\n\n\n")
+
+
+        picture_raw=b"\xFF\xD8"+picture_raw.split(b"\xFF\xD8")[1]
+        with open("success.jpg", "wb") as img:
+            img.write(picture_raw)
+        data = open("success.jpg", "rb").read()
+        pass
+
     def server_response(self):
         """Receives ONE (1) http response"""
         incoming = ""
+        incoming_raw=b""
         while not "\r\n\r\n" in incoming:
-            try:
-                incoming_raw = self.s.recv(500)
-                incoming = incoming+incoming_raw.decode("ascii")
-            except UnicodeDecodeError:
+            incoming_parts = self.s.recv(500)
+            incoming_raw=incoming_raw+incoming_parts
+            # try:
+            incoming = incoming_raw.decode("ascii")
+            # except UnicodeDecodeError:
                 # I think we're supposed to receive a picture here but this is a puzzle for future camila :P
-                break
-            else:
-                #print("\n\n!!!!!",incoming,"\n\n")
-                pass
+            #   self.victory(incoming_raw)
+            #    break
+            #else:
+        #print("\n\n!!!!!",incoming,"\n\n")
+            #    pass
+        
 
-        if '200' in incoming.split("\n")[0]:
+        if '200' in incoming.split("\r\n\r\n")[0]:
             self.found = True
             self.pw = getPWfromIDX(self.current, PASSWORD_SIZE)
             print("GOT IT!\nwas it "+self.pw+"?")
             self.sayFoundPW()
+            print("VERY IMPORTANT: ",incoming.split("\r\n\r\n"))
+            self.victory()
 
     def loop(self):
-        self.sayHello()
+        #self.sayHello()
         while not self.found:
             #print("time now:",time.time())
             #print("target time:",self.lastTry + COOLDOWN_TIME/1000)
+            if self.isRangeVerified(): 
+                self.range = self.selectNewRange()
+                self.current = self.range[0]-1
             if time.time()>self.lastTry + COOLDOWN_TIME/1000:  # TODO - verify  that cooldown time has passed since last time
+                print("all your base are belong to us")  # nice ref :D
                 print(time.ctime(time.time()),": MY RANGE =",self.range)
-                #print("all your base are belong to us")  # nice ref :D
                 toTest = []
                 full = False
                 for i in range(MIN_TRIES):  # get next MIN_TRIES passwords from ids
@@ -449,7 +483,7 @@ class zerg:
                         break
                     if self.isVerified(self.current): continue
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
-                    #print("TRIED:",self.current)
+                    print("TRIED:",self.current)
                     self.addToVerified(self.current)
                     #self.range[0] = self.current+1
                     if self.found:
@@ -458,7 +492,7 @@ class zerg:
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
-                print(time.ctime(time.time()),": VERIFIED =",self.verified)
+                #print(time.ctime(time.time()),": VERIFIED =",self.verified)
                 if full:
                     #print("Reached the end of my rope! Choosing a new range.")
                     # print("\n\nNEW RANGE!")
