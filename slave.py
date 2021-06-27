@@ -325,7 +325,10 @@ class zerg:
                         #I need to adjust my range if my ip is lower than the peer
                         self.range = self.selectNewRange()
                         self.current = self.range[0]-1
-
+                    else:
+                        pass
+                else:
+                    pass
             elif recvMSG['command']=='foundpw':
                 print("Password found:",recvMSG["pw"]+"!","Shutting down...")
                 exit(0) # Shutting down...
@@ -377,7 +380,7 @@ class zerg:
             picture_raw=picture_raw+incoming_parts
             incoming_parts=b""
 
-       
+
     def server_response(self):
         """Receives ONE (1) http response"""
         incoming = ""
@@ -396,7 +399,7 @@ class zerg:
 
     def loop(self):
         '''Main Loop'''
-        while not self.found:                                   # We exit manually but doesn't hurt
+        while not self.found:                                  
             if self.isRangeVerified():                          # Range is overlapping
                 self.range = self.selectNewRange()
                 self.current = self.range[0]-1
@@ -412,7 +415,7 @@ class zerg:
                         break
                     if self.isVerified(self.current): continue
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
-                    print("TRIED:",self.current+1)
+                    print("TRIED:",self.current)
                     self.addToVerified(self.current)
                     if self.found:
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
