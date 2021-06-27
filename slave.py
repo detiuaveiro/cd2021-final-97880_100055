@@ -423,12 +423,33 @@ class zerg:
 
     def victory(self):
         picture_raw=b""
+        pic_part=b""
         incoming_parts=b""
-        while not  b"\xFF\xD9" in picture_raw: #end of jpg
-            incoming_parts = self.s.recv(1)
-            #print("very rawreceived",incoming_parts)
+        while True: #end of jpg
+            while not b"\r\n" in incoming_parts:
+                incoming_parts = incoming_parts+self.s.recv(1)
+                print("incoming parts:",incoming_parts)
+                if incoming_parts == b"":
+                    #picture_raw=b"\xFF\xD8"+picture_raw.split(b"\xFF\xD8")[1]
+                    # print("pic raw:",picture_raw.decode())
+                    with open("success.jpg", "wb") as img:
+                        img.write(picture_raw)
+                    #data = open("success.jpg", "rb").read()
+                    exit(0)
+            size=incoming_parts.split(b"\r\n")[0]
+            #print("raw  chunk size? :",size)
+            size=int(size,16)
+            print("next size:",size)
+            incoming_parts = (self.s.recv(int(size)+3))
+            print("DEBUG: defore clean:",incoming_parts)
+            # \r\n e o separador de chunked, not \t\n\r\n, era bait
+            incoming_parts=incoming_parts[:-2] # these are not the bytes you're looking for
+            print("DEBUG: after clean:",incoming_parts)
+
+            print("very rawreceived",incoming_parts)
             #if incoming_parts.match("\\x[0-9A-F][0-9A-F]"):
-            picture_raw=picture_raw+incoming_parts.replace(b'\r\n',b'')
+            picture_raw=picture_raw+incoming_parts
+            incoming_parts=b""
 
             #print(" rawreceived: ",incoming_parts.split(b'\r\n')[1])
 
@@ -436,12 +457,7 @@ class zerg:
             #print(picture_raw,"\n---------------------\n\n\n")
 
 
-        picture_raw=b"\xFF\xD8"+picture_raw.split(b"\xFF\xD8")[1]
-        print("pic raw:",picture_raw.decode())
-        with open("success.jpg", "wb") as img:
-            img.write(picture_raw)
-        data = open("success.jpg", "rb").read()
-        pass
+       
 
     def server_response(self):
         """Receives ONE (1) http response"""
