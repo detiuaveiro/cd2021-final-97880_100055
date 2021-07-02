@@ -1,47 +1,14 @@
-# Slaves must be able to differentiate messages from otehr slaves and the server!
-
-Hello msg - when a new node joins the network, flood network with this message 
-
-Welcome - Response to Hello from existing nodes, include the 
-
-Update msg - sent after n passwords tries from each client, contains the list with the present nodes and the tried passwords since last update
-    upon receiving, 
-
-### IDEA
-
 Data Structures (slave):
-!!!!!!!!
-id -> slave identifier
-jointime -> time at which the slave joined the network, used to calculate the identifier
 range -> [start end], meaning this slave is currently searching between passwords start and end
 current -> int, the last password the slave verified, meaning every password between start and current have been verified
 verified -> [[0 10000] [30000 62^2]], array with all confirmed password ranges that have been verified, sorted
-peers -> {peer, peerRange}, array that stores the peers that are presumably alive at the moment, and the ranges they are currently exploring
+peers -> {peerIP, (timestamp,peerRange)}, array that stores the peers that are presumably alive at the moment, the timestamp
+of the last time it was seen, and the ranges they are currently exploring
 
 Messages:
-!!!!!!!!
-HELLO (args: id, jointime) MULTICAST -> sent by a slave that just joined the network
-                                if, after a timeout, no IMHERE response is had, assumes is alone
-                                when another slave recieves this message, saves the new slave in peers dict initialized with range [-2,-1] and responds with an IMHERE
-!!!!!!!!
-IMHERE (args: verified, range, jointime) MULTICAST -> sent in response to an HELLO or GOTALL message, also whenever the slave is waiting its cooldown time
-                                  when another slave recieves this message, updates their verified array to match what the other has already done and responds with a NEWRANGE
-
-NEWRANGE (args: range) MULTICAST -> sent in response to an IMHERE message after the slave has decided their new range
-                                    when another slave recieves this message, updates the respective peer range
-
-GOTALL (args: none) MULTICAST -> sent whenever a slave verified all passwords in their range
-                                 if, after a timeout, one of the peers hasn't responded, assumes peer is dead 
-                                 when another slave recieves this message, updates their verified, responds with an IMHERE
+IMHERE (args: verified, range) MULTICAST -> sent in response to an HELLO or GOTALL message, also whenever the slave is waiting 
+                                            its cooldown time when another slave recieves this message, updates their verified
+                                            array to match what the other has already done and responds with a NEWRANGE
 
 FOUNDPW (args: password) MULTICAST -> sent when a slave finds the correct password 
                                       when another slave recieves this message, prints password, stops working
-
-
-Message:
-{
-    topic:hello|imhere|newrange|gotall|found
-
-}
-DONE: (function) given an integer between 0 and 62^passLength, return the respective string, different integers must result in a different string
-TODO: Fix looping overlaps (they don't steal from one another, they don't start out with the whole range)

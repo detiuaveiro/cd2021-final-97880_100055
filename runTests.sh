@@ -41,9 +41,9 @@ do
     cd server
     docker run -d  --name server  --rm server 2>/dev/null >/dev/null
     cd ..
-    docker run -d  --name w3 --rm proj 2>/dev/null >/dev/null
-    docker run -d   --name w2 --rm proj 2>/dev/null >/dev/null
-    { time docker run --name w1  --rm proj >w1output.txt ;}  2> tmp.txt
+    #docker run -d  --name w3 --rm proj 2>/dev/null >w2output.txt
+    #docker run -d   --name w2 --rm proj 2>/dev/null >w3output.txt
+    { time docker run --name w1  --rm proj >>w1output.txt ;}  2> tmp.txt
     grep -v '^[[:blank:]]*$' tmp.txt > tmp2.txt
     head -1 tmp2.txt >> times.txt
     cd server
@@ -54,3 +54,5 @@ do
     docker rm -f w3 2>/dev/null
     docker rm -f w2 2>/dev/null
 done
+rm tmp.txt
+rm tmp2.txt 

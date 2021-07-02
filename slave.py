@@ -62,8 +62,6 @@ def getPWfromIDX(idx, size: int = PASSWORD_SIZE):
     #print("size:",size)
     if 0 > idx or idx >= (62**size):
         print("Idx not in range!")
-        print("idx:",idx)
-        print("range:",62**size)
         return "a"
     str = encode(idx, BASE62)
     if len(str) < size:
@@ -139,6 +137,13 @@ def contains(r1 : list, r2 : list):
     if r1[0]<=r2[0] and r2[1]<=r1[1]:
         return True
     return False
+
+def arraySum(rangeArray : list):
+    rangeArray = mergeList(rangeArray)
+    sum = 0
+    for range in rangeArray:
+        sum += range[1]-range[0]
+    return sum
 
 class zerg:
     def __init__(self, name: str = ""):
@@ -229,7 +234,6 @@ class zerg:
                 return invert[betterIDX]
         else:
             # all spaces are occupied by slaves or already checked -> choses the peer with the biggest workload, and divides it
-            
             betterPeer = -1
             betterRNG = 0
             for peer in self.peers.keys():
@@ -239,18 +243,6 @@ class zerg:
                     betterPeer = peer
             low = int((self.peers[betterPeer][1][1] - self.peers[betterPeer][1][0])/2)
             return [low,self.peers[betterPeer][1][1]]
-
-    def sayHello(self):                             # Peer joins the group
-        '''Get a hello message'''  # Hello there
-        msg = {
-            'command': 'hello'
-        }
-        encodedMSG = pickle.dumps(msg)
-
-        # Send the Hello message to peers (via Multicast)
-        self.mCastSock.setsockopt(
-            socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, self.MCAST_TTL)
-        self.mCastSock.sendto(encodedMSG, (self.MCAST_GRP, self.MCAST_PORT))
 
     def sayImHere(self):                           
         '''Get a imhere message'''  # General Kenobi
@@ -287,7 +279,6 @@ class zerg:
             try:
                 data, server = self.mcastSock.recvfrom(1024)
             except socket.timeout:
-                print("timed out, no more responses.")
                 break
             else:
                 if server not in self.peers.keys():     # New peer, add them to our contact book
@@ -299,7 +290,6 @@ class zerg:
         try:
             data, server = self.mCastSock.recvfrom(1024)
         except socket.timeout:
-            #print("Slave",self.name+":","timed out, no more responses.") Silent peer
             return
         else:
             recvMSG = pickle.loads(data) 
@@ -307,9 +297,7 @@ class zerg:
                 self.peers[server]=[time.time(),self.peers[server][1]] # last seen at: now
             else:
                 self.peers[server]=[time.time(),[0,0]]  # New peer
-            if recvMSG['command']=='hello':
-                self.sayImHere()                        # Answer Hello with ImHere
-            elif recvMSG['command']=='imhere':
+            if recvMSG['command']=='imhere':
                 # Sort out stored ranges and verified pwds
                 peerRange = recvMSG['range']
                 self.peers[server][1] = peerRange
@@ -331,6 +319,7 @@ class zerg:
                     pass
             elif recvMSG['command']=='foundpw':
                 print("Password found:",recvMSG["pw"]+"!","Shutting down...")
+                print("# PASSWORDS TESTED:", arraySum(self.verified))
                 exit(0) # Shutting down...
             return
 
@@ -364,13 +353,14 @@ class zerg:
         incoming_parts=b""
         while True:
             while not b"\r\n" in incoming_parts:
-                #Get the size of next chunk
                 incoming_parts = incoming_parts+self.s.recv(1)  # Byte a Byte enche a galinha o papo
                 if incoming_parts == b"":
-                    # End of message
-                    print("Picture received!")
+                    #print("Picture received!")
                     with open("success.jpg", "wb") as img:
                         img.write(picture_raw)
+                    #print("BOOBA",self.verified)
+                    print("# PASSWORDS TESTED:", arraySum(self.verified))
+
                     return
             size=incoming_parts.split(b"\r\n")[0]               # Remove pesky chunked line separators
             size=int(size,16)
@@ -404,8 +394,8 @@ class zerg:
                 self.range = self.selectNewRange()
                 self.current = self.range[0]-1
             if time.time()>self.lastTry + COOLDOWN_TIME/1000:   # If Cooldown Time has passed since last try
-                print("all your base are belong to us")         # nice ref :D
-                print(time.ctime(time.time()),": MY RANGE =",self.range)
+                #print("all your base are belong to us")         # nice ref :D
+                #print(time.ctime(time.time()),": MY RANGE =",self.range)
                 toTest = []
                 full = False
                 for i in range(MIN_TRIES):                      # get next MIN_TRIES passwords from ids
@@ -415,30 +405,18 @@ class zerg:
                         break
                     if self.isVerified(self.current): continue
                     self.try_pw(getPWfromIDX(self.current, PASSWORD_SIZE))
-                    print("TRIED:",self.current)
+                    #print("TRIED:",self.current)
                     self.addToVerified(self.current)
                     if self.found:
                         return getPWfromIDX(self.current, PASSWORD_SIZE)
                 self.lastTry = time.time()
                 self.sayImHere()
-                #print(time.ctime(time.time()),": VERIFIED =",self.verified)
                 if full:
-                    #print("Reached the end of my rope! Choosing a new range.")
-                    # print("\n\nNEW RANGE!")
                     self.range = self.selectNewRange()
-                    # print("Decided on:",self.range,"\n\n")
                     self.current = self.range[0]-1
-                    #print("IMHERE RESULT: New range:",self.range,"Starting from:",self.current,"\n\n")
                     pass
-
-            # The usual method for event treatment
-
-            #print("current peers: ",self.peers)
             for peer in self.peers.keys():
-                #print("old time: ",self.peers[peer][0])
-                #print("new time: ",time.time() - 5)
                 if self.peers[peer][0] < time.time() - 5 and time.time() - 15!=0 :
-                    #print("took too long bye")
                     self.peers.pop(peer)
                     break
             toDo = self.sel.select(0)
